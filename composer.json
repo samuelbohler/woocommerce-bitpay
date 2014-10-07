@@ -1,0 +1,11 @@
+{
+	"repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/bitpay/php-bitpay-client.git"
+        }
+    ],
+    "require": {
+        "bitpay/php-client": "dev-master@dev"
+    }
+}

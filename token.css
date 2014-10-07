@@ -1,0 +1,48 @@
+@import url(http://fonts.googleapis.com/css?family=Ubuntu:400);
+.bitpay-token {
+	background: #002855;
+	font-family: 'Ubuntu', sans-serif;
+	color: #fff;
+	border-left: 4px solid #0F0;
+	display: inline-block;
+	position: relative;
+	padding-bottom: 1em;
+	border-radius: 4px;
+}
+.bitpay-token.testnet {
+	border-color: #cc0;
+}
+.bitpay-token > div {
+	padding: 0 1em;
+	font-size: 0.85em;
+	color: #ccddff;
+}
+.bitpay-token > div b {
+	color: #fff;
+}
+.bitpay-token header {
+	margin-bottom: 0.5em;
+}
+.bitpay-logo {
+	width: 5em;
+	display: inline-block;
+	box-sizing: border-box;
+	text-align: center;
+}
+.bitpay-logo img {
+	margin-bottom: -13px;
+}
+.bitpay-network {
+	color: #0f0;
+}
+.bitpay-network.testnet {
+	color: #cc0;
+}
+#bitpay_revoke {
+	display: block;
+	float: right;
+	padding: 0.5em 0.75em;
+	color: #f00;
+	text-decoration: none;
+	text-align: right;
+}
