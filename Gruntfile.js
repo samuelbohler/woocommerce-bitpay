@@ -1,3 +1,10 @@
+/**
+ * @license Copyright 2011-2014 BitPay Inc., MIT License 
+ * see https://github.com/bitpay/woocommerce-bitpay/blob/master/LICENSE
+ */
+
+'use strict';
+
 module.exports = function(grunt) {
 
   // Project configuration.
@@ -14,32 +21,54 @@ module.exports = function(grunt) {
     },
     copy: {
       build: {
-        files: [{
-          expand: true,
-          cwd: 'src/',
-          src: ['**.php', 'img/**', 'templates/**'],
-          dest: 'dist/'
-        }]
+        files: [
+          {
+            expand: true,
+            cwd: 'src/',
+            src: ['**/**.php', 'assets/js/**/**.*', 'assets/img/**/**.*', 'templates/**/**.*'],
+            dest: 'dist/'
+          },
+          {
+            expand: true,
+            src: ['vendor/**/**.*'],
+            dest: 'dist/'
+          }
+        ]
       },
       dev: {
         files: [{
           expand: true,
           cwd: 'dist/',
-          src: ['**'],
+          src: ['**/**'],
           dest: '/var/www/wp-content/plugins/woocommerce-bitpay/'
         }]
       }
     },
     cssmin: {
-      combine: {
+      build: {
+        options: {
+          banner: '/**\n * @license Copyright 2011-2014 BitPay Inc., MIT License\n * see https://github.com/bitpay/woocommerce-bitpay/blob/master/LICENSE\n */'
+        },
         files: {
-          'dist/css/style.css': ['src/css/**.css']
+          'dist/assets/css/style.css': ['src/assets/css/**.css']
         }
       }
     },
+    phpcsfixer: {
+        build: {
+            dir: 'src/'
+        },
+        options: {
+            bin: 'vendor/bin/php-cs-fixer',
+            diff: true,
+            ignoreExitCode: true,
+            level: 'all',
+            quiet: true
+        }
+    },
     watch: {
       scripts: {
-        files: ['src/**'],
+        files: ['src/**/**.*'],
         tasks: ['dev'],
         options: {
           spawn: false,
@@ -55,9 +84,10 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-symlink');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-php-cs-fixer');
 
   // Default task(s).
-  grunt.registerTask('build', ['clean:build', 'cssmin', 'copy:build']);
+  grunt.registerTask('build', ['phpcsfixer', 'clean:build', 'cssmin:build', 'copy:build']);
   grunt.registerTask('dev', ['build', 'clean:dev', 'copy:dev']);
   grunt.registerTask('default', 'build');
 
