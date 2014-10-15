@@ -400,7 +400,7 @@ function woocommerce_bitpay_init()
 
                     case 'confirmed':
 
-                        if ( in_array($order->status, array('on-hold', 'pending', 'failed', $paid_status ) ) ) {
+                        if ( in_array($order->status, array('on-hold', 'pending', 'processing', 'failed', $paid_status ) ) ) {
                             $order->update_status($confirmed_status, __('BitPay invoice confirmed. Awaiting payment completed status.', 'bitpay'));
                         }
                         break;
