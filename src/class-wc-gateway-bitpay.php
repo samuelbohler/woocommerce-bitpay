@@ -33,8 +33,9 @@ function woocommerce_bitpay_init()
             {
 
                 $this->id                 = 'bitpay';
-                $this->icon               = plugin_dir_url(__FILE__).'bitpay.png';
+                $this->icon               = plugin_dir_url(__FILE__).'assets/img/icon.png';
                 $this->has_fields         = false;
+                $this->order_button_text    = __( 'Proceed to BitPay', 'bitpay' );
                 $this->method_title       = 'BitPay';
                 $this->method_description = 'BitPay allows you to accept bitcoin on your WooCommerce store.';
 
@@ -54,11 +55,14 @@ function woocommerce_bitpay_init()
                 $this->api_token_label    = get_option( 'woocommerce_bitpay_label' );
                 $this->api_network        = get_option( 'woocommerce_bitpay_network' );
 
-                $this->redirect_url       = WC()->api_request_url( 'WC_Gateway_Bitpay' );
+                $this->notification_url   = WC()->api_request_url( 'WC_Gateway_Bitpay' );
 
                 // Actions
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'save_order_states' ) );
+
+                // IPN Callback
+                add_action( 'woocommerce_api_wc_gateway_bitpay', array( $this, 'ipn_callback' ) );
 
             }
 
@@ -84,7 +88,7 @@ function woocommerce_bitpay_init()
                         'title'       => __( 'Title', 'woocommerce' ),
                         'type'        => 'text',
                         'description' => __( 'This controls the title which the user sees during checkout.', 'woocommerce' ),
-                        'default'     => __( 'Bitcoin - BitPay', 'bitpay' ),
+                        'default'     => __( 'Bitcoin', 'bitpay' ),
                     ),
                     'message' => array(
                         'title' => __( 'Customer Message', 'woothemes' ),
@@ -174,8 +178,8 @@ function woocommerce_bitpay_init()
                 $pairing_form = file_get_contents(plugin_dir_url(__FILE__).'templates/pairing.tpl');
                 $token_format = file_get_contents(plugin_dir_url(__FILE__).'templates/token.tpl');
 
-                $bp_statuses = ['new'=>'New', 'paid'=>'Paid', 'confirmed'=>'Confirmed', 'complete'=>'Complete', 'expired'=>'Expired', 'invalid'=>'Invalid'];
-                $df_statuses = ['new'=>'wc-pending', 'paid'=>'wc-processing', 'confirmed'=>'wc-processing', 'complete'=>'wc-completed', 'expired'=>'wc-failed', 'invalid'=>'wc-failed'];
+                $bp_statuses = ['paid'=>'Paid', 'confirmed'=>'Confirmed', 'complete'=>'Complete', 'invalid'=>'Invalid'];
+                $df_statuses = ['paid'=>'wc-processing', 'confirmed'=>'wc-processing', 'complete'=>'wc-completed', 'invalid'=>'wc-failed'];
                 $wc_statuses = wc_get_order_statuses();
 
                 ?>
@@ -226,7 +230,7 @@ function woocommerce_bitpay_init()
              */
             public function save_order_states()
             {
-                $bp_statuses = ['new'=>'New', 'paid'=>'Paid', 'confirmed'=>'Confirmed', 'complete'=>'Complete', 'expired'=>'Expired', 'invalid'=>'Invalid'];
+                $bp_statuses = ['paid'=>'Paid', 'confirmed'=>'Confirmed', 'complete'=>'Complete', 'invalid'=>'Invalid'];
                 $wc_statuses = wc_get_order_statuses();
 
                 if ( isset( $_POST['bitpay_order_state'] ) ) {
@@ -264,19 +268,163 @@ function woocommerce_bitpay_init()
                 $order = wc_get_order( $order_id );
 
                 // Mark as on-hold (we're awaiting the payment)
-                $order->update_status( 'on-hold', 'Awaiting payment confirmation.' );
+                $order->update_status( 'on-hold', 'Awaiting payment notification from BitPay.' );
 
+                // invoice options
+                $vcheck = explode('.',WC_VERSION);
+                if(trim($vcheck[0]) >= '2' && trim($vcheck[1]) >= '1')
+                    $thanks_link = $this->get_return_url( $order );
+                else
+                    $thanks_link =  get_permalink(get_option('woocommerce_thanks_page_id'));
+
+                // Redirect URL & Notification URL
+                $redirectUrl = add_query_arg('key', $order->order_key, add_query_arg('order', $order_id, $thanks_link));
+
+                // Setup the currency
+                $currency_code = get_woocommerce_currency();
+                $currency = new \Bitpay\Currency();
+                $currency->setCode( $currency_code );
+
+                // Get a BitPay Client to prepare for invoice creation
+                $client = new \Bitpay\Client\Client();
+                if ($this->api_network === 'livenet') {
+                    $client->setNetwork(new \Bitpay\Network\Livenet());
+                } else {
+                    $client->setNetwork(new \Bitpay\Network\Testnet());
+                }
+                $client->setAdapter(new \Bitpay\Client\Adapter\CurlAdapter());
+                $client->setPrivateKey($this->api_key);
+                $client->setPublicKey($this->api_pub);
+                $client->setToken($this->api_token);
+
+                // Setup the Invoice
+                $invoice = new \Bitpay\Invoice();
+                $invoice->setOrderId( $order_id );
+                $invoice->setCurrency( $currency );
+
+                // Add a priced item to the invoice
+                $item = new \Bitpay\Item();
+                $item->setPrice( $order->order_total );
+                $invoice->setItem( $item );
+
+                // Add the Redirect and Notification URLs
+                $invoice->setRedirectUrl( $redirectUrl );
+                $invoice->setNotificationUrl( $this->notification_url );
+
+                try {
+                    $invoice = $client->createInvoice($invoice);
+                } catch (Exception $e) {
+                    // TODO: add error logging
+                    return array(
+                        'result'    => 'error'
+                        // TODO: add error message
+                    );
+                }
                 // Reduce stock levels
                 $order->reduce_order_stock();
 
                 // Remove cart
                 WC()->cart->empty_cart();
 
-                // Return thankyou redirect
+                // Redirect the customer to the BitPay invoice
                 return array(
                     'result'    => 'success',
-                    'redirect'    => $this->get_return_url( $order )
+                    'redirect'    => $invoice->getUrl()
                 );
+            }
+
+            public function ipn_callback()
+            {
+                error_log('Getting here');
+                // Retrieve the Invoice ID and Network URL from the supposed IPN data
+                $post = file_get_contents("php://input");
+                if (!$post) {
+                    error_log('No post data');
+                    return array('error' => 'No post data');
+                }
+
+                $json = json_decode($post, true);
+                if (is_string($json)) {
+                    error_log('Not valid json');
+                    return array('error' => $json);
+                }
+
+                if (!array_key_exists('id', $json)) {
+                    error_log('No id field in json');
+                    return array('error' => 'No Invoice ID');
+                }
+
+                if (!array_key_exists('url', $json)) {
+                    error_log('No url field in json');
+                    return array('error' => 'No Invoice URL');
+                }
+
+                // Get a BitPay Client to prepare for invoice fetching
+                $client = new \Bitpay\Client\Client();
+                if (strpos($json['url'], 'test') === false) {
+                    $client->setNetwork(new \Bitpay\Network\Livenet());
+                } else {
+                    $client->setNetwork(new \Bitpay\Network\Testnet());
+                }
+                $client->setAdapter(new \Bitpay\Client\Adapter\CurlAdapter());
+                $client->setPrivateKey($this->api_key);
+                $client->setPublicKey($this->api_pub);
+                $client->setToken($this->api_token);
+
+                // Fetch the invoice from BitPay's server to update the order
+                try {
+                    $invoice = $client->getInvoice($json['id']);
+                } catch (Exception $e) {
+                    // TODO: add error logging
+                    error_log("Can't find invoice ".$json['id']);
+                    return array(
+                        'error'    => 'error'
+                        // TODO: add error message
+                    );
+                }
+
+                error_log("Created the invoice");
+
+                $orderId = $invoice->getOrderId();
+                $order = new WC_Order( $orderId );
+
+                $paid_status = get_option('woocommerce_bitpay_order_state_paid', 'processing');
+                $confirmed_status = get_option('woocommerce_bitpay_order_state_confirmed', 'processing');
+                $complete_status = get_option('woocommerce_bitpay_order_state_complete', 'completed');
+                $invalid_status = get_option('woocommerce_bitpay_order_state_invalid', 'failed');
+
+                switch ($invoice->getStatus()) {
+                    case 'paid':
+
+                        if ( in_array($order->status, array('on-hold', 'failed' ) ) ) {
+                            $order->update_status($paid_status, __('BitPay invoice paid. Awaiting network confirmation and payment completed status.', 'bitpay'));
+                        }
+                        break;
+
+                    case 'confirmed':
+
+                        if ( in_array($order->status, array('on-hold', 'pending', 'failed', $paid_status ) ) ) {
+                            $order->update_status($confirmed_status, __('BitPay invoice confirmed. Awaiting payment completed status.', 'bitpay'));
+                        }
+                        break;
+
+                    case 'complete':
+
+                        if ( in_array($order->status, array('on-hold', 'processing', 'pending', 'failed', $paid_status, $confirmed_status ) ) ) {
+                            $order->payment_complete();
+                            $order->update_status($complete_status, __('BitPay invoice payment completed. Payment credited to your merchant account.', 'bitpay'));
+                        }
+                        break;
+
+                    case 'invalid':
+
+                        if ( in_array($order->status, array('on-hold', 'pending') ) ) {
+                            $order->update_status($invalid_status, __('Bitcoin payment is invalid for this order! The payment was not confirmed by the network within 1 hour.', 'bitpay'));
+                        }
+                        break;
+
+                }
+
             }
 
         }

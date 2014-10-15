@@ -7,6 +7,7 @@
     ],
     "require": {
         "bitpay/php-client": "dev-master@dev",
-		"fabpot/php-cs-fixer": "@stable"
+		"fabpot/php-cs-fixer": "@stable",
+		"phpunit/phpunit": "~3.7"
     }
 }
