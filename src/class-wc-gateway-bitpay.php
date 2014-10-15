@@ -335,27 +335,23 @@ function woocommerce_bitpay_init()
 
             public function ipn_callback()
             {
-                error_log('Getting here');
+
                 // Retrieve the Invoice ID and Network URL from the supposed IPN data
                 $post = file_get_contents("php://input");
                 if (!$post) {
-                    error_log('No post data');
                     return array('error' => 'No post data');
                 }
 
                 $json = json_decode($post, true);
                 if (is_string($json)) {
-                    error_log('Not valid json');
                     return array('error' => $json);
                 }
 
                 if (!array_key_exists('id', $json)) {
-                    error_log('No id field in json');
                     return array('error' => 'No Invoice ID');
                 }
 
                 if (!array_key_exists('url', $json)) {
-                    error_log('No url field in json');
                     return array('error' => 'No Invoice URL');
                 }
 
@@ -377,6 +373,7 @@ function woocommerce_bitpay_init()
                 } catch (Exception $e) {
                     // TODO: add error logging
                     error_log("Can't find invoice ".$json['id']);
+
                     return array(
                         'error'    => 'error'
                         // TODO: add error message
