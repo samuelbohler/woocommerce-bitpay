@@ -48,10 +48,10 @@ function woocommerce_bitpay_init()
                 $this->description        = $this->get_option( 'description' );
 
                 // Define BitPay settings
-                $this->api_key            = unserialize(get_option( 'woocommerce_bitpay_key' ));
-                $this->api_pub            = unserialize(get_option( 'woocommerce_bitpay_pub' ));
+                $this->api_key            = bitpay_decrypt(get_option( 'woocommerce_bitpay_key' ));
+                $this->api_pub            = bitpay_decrypt(get_option( 'woocommerce_bitpay_pub' ));
                 $this->api_sin            = get_option( 'woocommerce_bitpay_sin' );
-                $this->api_token          = unserialize(get_option( 'woocommerce_bitpay_token' ));
+                $this->api_token          = bitpay_decrypt(get_option( 'woocommerce_bitpay_token' ));
                 $this->api_token_label    = get_option( 'woocommerce_bitpay_label' );
                 $this->api_network        = get_option( 'woocommerce_bitpay_network' );
 
@@ -315,6 +315,9 @@ function woocommerce_bitpay_init()
                     $invoice = $client->createInvoice($invoice);
                 } catch (Exception $e) {
                     // TODO: add error logging
+                    error_log($e->getMessage());
+                    error_log($client->getResponse()->getBody());
+
                     return array(
                         'result'    => 'error'
                         // TODO: add error message
@@ -380,8 +383,6 @@ function woocommerce_bitpay_init()
                     );
                 }
 
-                error_log("Created the invoice");
-
                 $orderId = $invoice->getOrderId();
                 $order = new WC_Order( $orderId );
 
@@ -395,6 +396,8 @@ function woocommerce_bitpay_init()
 
                         if ( in_array($order->status, array('on-hold', 'failed' ) ) ) {
                             $order->update_status($paid_status, __('BitPay invoice paid. Awaiting network confirmation and payment completed status.', 'bitpay'));
+                        } else {
+                            error_log('Paid IPN, but order has status: '.$order-status);
                         }
                         break;
 
@@ -402,6 +405,8 @@ function woocommerce_bitpay_init()
 
                         if ( in_array($order->status, array('on-hold', 'pending', 'processing', 'failed', $paid_status ) ) ) {
                             $order->update_status($confirmed_status, __('BitPay invoice confirmed. Awaiting payment completed status.', 'bitpay'));
+                        } else {
+                            error_log('Confirmed IPN, but order has status: '.$order-status);
                         }
                         break;
 
@@ -410,6 +415,8 @@ function woocommerce_bitpay_init()
                         if ( in_array($order->status, array('on-hold', 'processing', 'pending', 'failed', $paid_status, $confirmed_status ) ) ) {
                             $order->payment_complete();
                             $order->update_status($complete_status, __('BitPay invoice payment completed. Payment credited to your merchant account.', 'bitpay'));
+                        } else {
+                            error_log('Complete IPN, but order has status: '.$order-status);
                         }
                         break;
 
@@ -417,8 +424,12 @@ function woocommerce_bitpay_init()
 
                         if ( in_array($order->status, array('on-hold', 'pending') ) ) {
                             $order->update_status($invalid_status, __('Bitcoin payment is invalid for this order! The payment was not confirmed by the network within 1 hour.', 'bitpay'));
+                        } else {
+                            error_log('Paid IPN, but order has status: '.$order-status);
                         }
                         break;
+                    case 'default':
+                        error_log('Unhandled invoice status: '.$invoice->getStatus());
 
                 }
 
@@ -537,10 +548,10 @@ function woocommerce_bitpay_init()
             wp_send_json(array("error"=>$e->getMessage()));
         }
 
-        update_option('woocommerce_bitpay_key', serialize($key));
-        update_option('woocommerce_bitpay_pub', serialize($pub));
+        update_option('woocommerce_bitpay_key', bitpay_encrypt($key));
+        update_option('woocommerce_bitpay_pub', bitpay_encrypt($pub));
         update_option('woocommerce_bitpay_sin', (string) $sin);
-        update_option('woocommerce_bitpay_token', serialize($token));
+        update_option('woocommerce_bitpay_token', bitpay_encrypt($token));
         update_option('woocommerce_bitpay_label', "WooCommerce - {$_SERVER['SERVER_NAME']}");
         update_option('woocommerce_bitpay_network', $network);
         wp_send_json(array('sin'=>(string) $sin, 'label'=>"WooCommerce - {$_SERVER['SERVER_NAME']}", 'network'=>$network));
@@ -557,37 +568,20 @@ function woocommerce_bitpay_init()
         wp_send_json(array('success'=>'Token Revoked!'));
     }
 
-    function ajax_bitpay_create_invoice()
+    function bitpay_encrypt($data)
     {
-        $key            = unserialize(get_option('woocommerce_bitpay_key'));
-        $pub            = unserialize(get_option('woocommerce_bitpay_pub'));
-        $sin            = get_option('woocommerce_bitpay_sin');
-        $token           = unserialize(get_option('woocommerce_bitpay_token'));
+        $fingerprint = \Bitpay\Util\Fingerprint::generate();
+        $encrypted = base64_encode(openssl_encrypt(serialize($data),'AES-128-CBC',$fingerprint,1,'0000000000000000'));
 
-        $client = new \Bitpay\Client\Client();
-        $client->setNetwork(new \Bitpay\Network\Livenet());
-        $client->setAdapter(new \Bitpay\Client\Adapter\CurlAdapter());
-        $client->setPrivateKey($key);
-        $client->setPublicKey($pub);
-        $client->setToken($token);
-
-        $invoice = new \Bitpay\Invoice();
-        $invoice->setOrderId('TEST-01');
-
-        $currency = new \Bitpay\Currency();
-        $currency->setCode('USD');
-        $invoice->setCurrency($currency);
-
-        $item = new \Bitpay\Item();
-        $item->setPrice('19.95');
-        $invoice->setItem($item);
-        try {
-            $invoice = $client->createInvoice($invoice);
-        } catch (Exception $e) {
-            echo "Sin: $sin\n";
-            echo "Key: $key\n";
-            echo "Pub: $pub\n";
-        }
-        //var_dump($invoice);
+        return $encrypted;
     }
+
+    function bitpay_decrypt($encrypted)
+    {
+        $fingerprint = \Bitpay\Util\Fingerprint::generate();
+        $decrypted = unserialize(openssl_decrypt(base64_decode($encrypted), 'AES-128-CBC', $fingerprint, 1, '0000000000000000'));
+
+        return $decrypted;
+    }
+
 }

@@ -12,3 +12,4 @@ composer.lock
 composer.phar
 /dist/
 /node_modules/
+npm_debug.log
