@@ -19,6 +19,18 @@ module.exports = function(grunt) {
         }
       }
     },
+    compress: {
+      build: {
+        options: {
+          archive: 'dist/woocommerce-bitpay-<%= pkg.version %>.zip'
+        },
+        files: [{
+          expand: true,
+          cwd: 'dist/woocommerce-bitpay',
+          src: ['**']
+        }]
+      }
+    },
     copy: {
       build: {
         files: [
@@ -26,19 +38,19 @@ module.exports = function(grunt) {
             expand: true,
             cwd: 'src/',
             src: ['**/**.php', 'assets/js/**/**.*', 'assets/img/**/**.*', 'templates/**/**.*'],
-            dest: 'dist/'
+            dest: 'dist/woocommerce-bitpay'
           },
           {
             expand: true,
             src: ['vendor/**/**.*'],
-            dest: 'dist/'
+            dest: 'dist/woocommerce-bitpay'
           }
         ]
       },
       dev: {
         files: [{
           expand: true,
-          cwd: 'dist/',
+          cwd: 'dist/woocommerce-bitpay',
           src: ['**/**'],
           dest: '/var/www/wp-content/plugins/woocommerce-bitpay/'
         }]
@@ -50,7 +62,7 @@ module.exports = function(grunt) {
           banner: '/**\n * @license Copyright 2011-2014 BitPay Inc., MIT License\n * see https://github.com/bitpay/woocommerce-bitpay/blob/master/LICENSE\n */'
         },
         files: {
-          'dist/assets/css/style.css': ['src/assets/css/**.css']
+          'dist/woocommerce-bitpay/assets/css/style.css': ['src/assets/css/**.css']
         }
       }
     },
@@ -80,14 +92,14 @@ module.exports = function(grunt) {
 
   // Load the plugins
   grunt.loadNpmTasks('grunt-contrib-clean');
+  grunt.loadNpmTasks('grunt-contrib-compress');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
-  grunt.loadNpmTasks('grunt-contrib-symlink');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-php-cs-fixer');
 
   // Default task(s).
-  grunt.registerTask('build', ['phpcsfixer', 'clean:build', 'cssmin:build', 'copy:build']);
+  grunt.registerTask('build', ['phpcsfixer', 'clean:build', 'cssmin:build', 'copy:build', 'compress:build']);
   grunt.registerTask('dev', ['build', 'clean:dev', 'copy:dev']);
   grunt.registerTask('default', 'build');
 
