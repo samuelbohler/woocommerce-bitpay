@@ -30,7 +30,7 @@ Perform the [setup](#Setup), then:
 ```bash
 $ grunt build
 # Outputs plugin at dist/woocommerce-bitpay
-# Outputs plugin archive at dist/woocommerce-bitpay-{version}.zip
+# Outputs plugin archive at dist/woocommerce-bitpay.zip
 ```
 
 ##Install
