@@ -15,7 +15,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 // Load up the BitPay library
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/lib/Bitpay/Autoloader.php';
+\Bitpay\Autoloader::register();
 
 // Ensures WooCommerce is loaded before initializing the BitPay plugin
 add_action('plugins_loaded', 'woocommerce_bitpay_init', 0);

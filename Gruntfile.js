@@ -13,7 +13,7 @@ module.exports = function(grunt) {
     clean: {
       build: ['dist'],
       dev: {
-        src: ['/var/www/wp-content/plugins/woocommerce-bitpay/'],
+        src: ['/var/www/html/woocommerce/wp-content/plugins/woocommerce-bitpay/'],
         options: {
           force: true
         }
@@ -22,7 +22,7 @@ module.exports = function(grunt) {
     compress: {
       build: {
         options: {
-          archive: 'dist/woocommerce-bitpay-<%= pkg.version %>.zip'
+          archive: 'dist/woocommerce-bitpay.zip'
         },
         files: [{
           expand: true,
@@ -42,8 +42,9 @@ module.exports = function(grunt) {
           },
           {
             expand: true,
-            src: ['vendor/**/**.*'],
-            dest: 'dist/woocommerce-bitpay'
+            cwd: 'vendor/bitpay/php-client/src/',
+            src: ['**/**.*'],
+            dest: 'dist/woocommerce-bitpay/lib'
           }
         ]
       },
@@ -52,7 +53,7 @@ module.exports = function(grunt) {
           expand: true,
           cwd: 'dist/woocommerce-bitpay',
           src: ['**/**'],
-          dest: '/var/www/wp-content/plugins/woocommerce-bitpay/'
+          dest: '/var/www/html/woocommerce/wp-content/plugins/woocommerce-bitpay/'
         }]
       }
     },

@@ -20,8 +20,12 @@
         "bitpay/php-client": "dev-master@dev"
     },
 	"require-dev": {
+        "wp-cli/wp-cli": "*",
         "fabpot/php-cs-fixer": "@stable",
-        "phpunit/phpunit": "~3.7",
-		"wp-cli/wp-cli": "~0.17"
-	}
+        "phpunit/phpunit": "~3.7"
+	},
+  "minimum-stability": "stable",
+  "config": {
+      "bin-dir": "bin/"
+  }
 }
