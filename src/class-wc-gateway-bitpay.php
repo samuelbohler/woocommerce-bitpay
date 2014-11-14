@@ -1,9 +1,9 @@
 <?php
 /*
-	Plugin Name: BitPay WooCommerce Payment Gateway
+	Plugin Name: BitPay for WooCommerce
 	Plugin URI:  https://bitpay.com
-	Description: BitPay WooCommerce Payment Gateway allows you to accept bitcoins on your WooCommerce store.
-	Author:      BitPay
+	Description: Enable your WooCommerce store to accept Bitcoin with BitPay.
+	Author:      bitpay
 	Author URI:  https://bitpay.com
 
 	Version: 	       2.0.0
@@ -20,6 +20,7 @@ require_once __DIR__ . '/lib/Bitpay/Autoloader.php';
 
 // Ensures WooCommerce is loaded before initializing the BitPay plugin
 add_action('plugins_loaded', 'woocommerce_bitpay_init', 0);
+register_deactivation_hook( __FILE__, 'woocommerce_bitpay_deactivate' );
 
 function woocommerce_bitpay_init()
 {
@@ -69,7 +70,7 @@ function woocommerce_bitpay_init()
 
             public function is_valid_for_use()
             {
-                // TODO: Check for valid settings and the ability to create invoices (account not over limit, correct currency, etc)
+                if(is_null($this->))
                 return true;
             }
 
@@ -542,7 +543,7 @@ function woocommerce_bitpay_init()
                 array(
                     'id'          => (string) $sin,
                     'pairingCode' => $pairing_code,
-                    'label'       => "WooCommerce - {$_SERVER['SERVER_NAME']}",
+                    'label'       => substr("WooCommerce - {$_SERVER['SERVER_NAME']}", 0, 60),
                 )
             );
         } catch (Exception $e) {
@@ -585,4 +586,20 @@ function woocommerce_bitpay_init()
         return $decrypted;
     }
 
+}
+
+// Deactivating the plugin
+function woocommerce_bitpay_deactivate()
+{
+    delete_option( 'woocommerce_bitpay_key' );
+    delete_option( 'woocommerce_bitpay_pub' );
+    delete_option( 'woocommerce_bitpay_sin' );
+    delete_option( 'woocommerce_bitpay_token' );
+    delete_option( 'woocommerce_bitpay_label' );
+    delete_option( 'woocommerce_bitpay_network' );
+    delete_option( 'woocommerce_bitpay_order_state_complete' );
+    delete_option( 'woocommerce_bitpay_order_state_confirmed' );
+    delete_option( 'woocommerce_bitpay_order_state_invalid' );
+    delete_option( 'woocommerce_bitpay_order_state_paid' );
+    delete_option( 'woocommerce_bitpay_settings' );
 }
