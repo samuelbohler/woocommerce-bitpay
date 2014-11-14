@@ -13,3 +13,6 @@ composer.phar
 /dist/
 /node_modules/
 npm_debug.log
+/wordpress/
+wp-cli.yml
+wp-tests-config.php

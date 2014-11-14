@@ -48,6 +48,7 @@ function woocommerce_bitpay_init()
                 // Define user set variables
                 $this->title              = $this->get_option( 'title' );
                 $this->description        = $this->get_option( 'description' );
+                $this->debug              = $this->get_option( 'debug' );
 
                 // Define BitPay settings
                 $this->api_key            = bitpay_decrypt(get_option( 'woocommerce_bitpay_key' ));
@@ -117,14 +118,15 @@ function woocommerce_bitpay_init()
                         ),
                         'default' => 'high',
                     ),
-                    'fullNotifications' => array(
-                        'title' => __('Full Notifications', 'bitpay'),
-                        'type' => 'checkbox',
-                        'description' => 'Yes: receive an email for each status update on a payment.<br>No: receive an email only when payment is confirmed.',
-                        'default' => 'no',
-                    ),
                     'order_states' => array(
                         'type'        => 'order_states'
+                    ),
+                    'debug' => array(
+                        'title'       => __( 'Debug Log', 'woocommerce' ),
+                        'type'        => 'checkbox',
+                        'label'       => __( 'Enable logging', 'woocommerce' ),
+                        'default'     => 'no',
+                        'description' => sprintf( __( 'Log BitPay events, such as IPN requests, inside <code>%s</code>', 'bitpay' ), wc_get_log_file_path( 'bitpay' ) )
                     )
                 );
             }
@@ -161,7 +163,7 @@ function woocommerce_bitpay_init()
                             ?>
     				    </div>
     			       	<script type="text/javascript">
-                            var ajax_loader_url = '<?= plugins_url( 'assets/images/ajax-loader.gif', __FILE__ ); ?>';
+                            var ajax_loader_url = '<?= plugins_url( 'assets/img/ajax-loader.gif', __FILE__ ); ?>';
     					</script>
     	            </td>
     		    </tr>
@@ -312,6 +314,7 @@ function woocommerce_bitpay_init()
                 $invoice = new \Bitpay\Invoice();
                 $invoice->setOrderId( $order_id );
                 $invoice->setCurrency( $currency );
+                $invoice->setFullNotifications( true );
 
                 // Add a priced item to the invoice
                 $item = new \Bitpay\Item();
