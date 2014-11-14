@@ -59,6 +59,11 @@ function woocommerce_bitpay_init()
 
                 $this->notification_url   = WC()->api_request_url( 'WC_Gateway_Bitpay' );
 
+                // Logs
+                if ('yes' == $this->debug) {
+                    $this->log = new WC_Logger();
+                }
+
                 // Actions
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
                 add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'save_order_states' ) );
@@ -70,7 +75,7 @@ function woocommerce_bitpay_init()
 
             public function is_valid_for_use()
             {
-                if(is_null($this->))
+                //if(is_null($this->))
                 return true;
             }
 
@@ -133,8 +138,8 @@ function woocommerce_bitpay_init()
 
                 // TODO: CSS Imports aren't optimal, but neither is this.  Maybe include the css to be css-minimized?
                 wp_enqueue_style( 'font-awesome', '//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css' );
-                wp_enqueue_style( 'woocommerce-bitpay', plugins_url( 'woocommerce-bitpay/assets/css/style.css') );
-                wp_enqueue_script( 'woocommerce-bitpay', plugins_url( 'woocommerce-bitpay/assets/js/pairing.js'), array('jquery'), null, true);
+                wp_enqueue_style( 'woocommerce-bitpay', plugins_url( 'assets/css/style.css', __FILE__ ) );
+                wp_enqueue_script( 'woocommerce-bitpay', plugins_url( 'assets/js/pairing.js', __FILE__ ), array('jquery'), null, true);
 
                 $pairing_form = file_get_contents(plugin_dir_url(__FILE__).'templates/pairing.tpl');
                 $token_format = file_get_contents(plugin_dir_url(__FILE__).'templates/token.tpl');
@@ -147,16 +152,16 @@ function woocommerce_bitpay_init()
     		            	<?php
                                 if (empty($this->api_token)) {
                                     echo sprintf($pairing_form, 'visible');
-                                    echo sprintf($token_format, 'hidden', plugins_url( 'woocommerce-bitpay/assets/img/logo.png' ),'','');
+                                    echo sprintf($token_format, 'hidden', plugins_url( 'assets/img/logo.png', __FILE__ ),'','');
                                 } else {
                                     echo sprintf($pairing_form, 'hidden');
-                                    echo sprintf($token_format, $this->api_network, plugins_url( 'woocommerce-bitpay/assets/img/logo.png' ), $this->api_token_label, $this->api_sin);
+                                    echo sprintf($token_format, $this->api_network, plugins_url( 'assets/img/logo.png', __FILE__ ), $this->api_token_label, $this->api_sin);
                                 }
 
                             ?>
     				    </div>
     			       	<script type="text/javascript">
-                            var ajax_loader_url = '<?= plugins_url( 'woocommerce/assets/images/ajax-loader.gif' ); ?>';
+                            var ajax_loader_url = '<?= plugins_url( 'assets/images/ajax-loader.gif', __FILE__ ); ?>';
     					</script>
     	            </td>
     		    </tr>
@@ -174,8 +179,8 @@ function woocommerce_bitpay_init()
 
                 // TODO: CSS Imports aren't optimal, but neither is this.  Maybe include the css to be css-minimized?
                 wp_enqueue_style( 'font-awesome', '//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css' );
-                wp_enqueue_style( 'woocommerce-bitpay', plugins_url( 'woocommerce-bitpay/assets/css/style.css') );
-                wp_enqueue_script( 'woocommerce-bitpay', plugins_url( 'woocommerce-bitpay/assets/js/pairing.js'), array('jquery'), null, true);
+                wp_enqueue_style( 'woocommerce-bitpay', plugins_url( 'assets/css/style.css', __FILE__ ) );
+                wp_enqueue_script( 'woocommerce-bitpay', plugins_url( 'assets/js/pairing.js', __FILE__ ), array('jquery'), null, true);
 
                 $pairing_form = file_get_contents(plugin_dir_url(__FILE__).'templates/pairing.tpl');
                 $token_format = file_get_contents(plugin_dir_url(__FILE__).'templates/token.tpl');
@@ -268,6 +273,10 @@ function woocommerce_bitpay_init()
             public function process_payment($order_id)
             {
                 $order = wc_get_order( $order_id );
+
+                if ('yes' == $this->debug) {
+                    $this->log->add( 'bitpay', 'Generating payment form for order ' . $order->get_order_number() . '. Notify URL: ' . $this->notification_url );
+                }
 
                 // Mark as on-hold (we're awaiting the payment)
                 $order->update_status( 'on-hold', 'Awaiting payment notification from BitPay.' );
@@ -363,10 +372,17 @@ function woocommerce_bitpay_init()
                 // Get a BitPay Client to prepare for invoice fetching
                 $client = new \Bitpay\Client\Client();
                 if (strpos($json['url'], 'test') === false) {
-                    $client->setNetwork(new \Bitpay\Network\Livenet());
+                    $network = new \Bitpay\Network\Livenet();
+
                 } else {
-                    $client->setNetwork(new \Bitpay\Network\Testnet());
+                    $network = new \Bitpay\Network\Testnet();
                 }
+
+                if ('yes' == $this->debug) {
+                    $this->log->add( 'bitpay', 'Checking IPN response is valid via ' . $network->getName() . '...' );
+                }
+
+                $client->setNetwork($network);
                 $client->setAdapter(new \Bitpay\Client\Adapter\CurlAdapter());
                 $client->setPrivateKey($this->api_key);
                 $client->setPublicKey($this->api_pub);
@@ -376,8 +392,10 @@ function woocommerce_bitpay_init()
                 try {
                     $invoice = $client->getInvoice($json['id']);
                 } catch (Exception $e) {
-                    // TODO: add error logging
-                    error_log("Can't find invoice ".$json['id']);
+                    $error_string = 'IPN Check: Can\'t find invoice '.$json['id'];
+                    if ('yes' == $this->debug) {
+                        $this->log->add( 'bitpay', "[Error] $error_string" );
+                    }
 
                     return array(
                         'error'    => 'error'
@@ -399,7 +417,10 @@ function woocommerce_bitpay_init()
                         if ( in_array($order->status, array('on-hold', 'failed' ) ) ) {
                             $order->update_status($paid_status, __('BitPay invoice paid. Awaiting network confirmation and payment completed status.', 'bitpay'));
                         } else {
-                            error_log('Paid IPN, but order has status: '.$order-status);
+                            $error_string = 'Paid IPN, but order has status: '.$order->status;
+                            if ('yes' == $this->debug) {
+                                $this->log->add( 'bitpay', "[Warning] $error_string" );
+                            }
                         }
                         break;
 
@@ -408,7 +429,10 @@ function woocommerce_bitpay_init()
                         if ( in_array($order->status, array('on-hold', 'pending', 'processing', 'failed', $paid_status ) ) ) {
                             $order->update_status($confirmed_status, __('BitPay invoice confirmed. Awaiting payment completed status.', 'bitpay'));
                         } else {
-                            error_log('Confirmed IPN, but order has status: '.$order-status);
+                            $error_string = 'Confirmed IPN, but order has status: '.$order->status;
+                            if ('yes' == $this->debug) {
+                                $this->log->add( 'bitpay', "[Warning] $error_string" );
+                            }
                         }
                         break;
 
@@ -418,7 +442,10 @@ function woocommerce_bitpay_init()
                             $order->payment_complete();
                             $order->update_status($complete_status, __('BitPay invoice payment completed. Payment credited to your merchant account.', 'bitpay'));
                         } else {
-                            error_log('Complete IPN, but order has status: '.$order-status);
+                            $error_string = 'Complete IPN, but order has status: '.$order->status;
+                            if ('yes' == $this->debug) {
+                                $this->log->add( 'bitpay', "[Warning] $error_string" );
+                            }
                         }
                         break;
 
@@ -427,11 +454,17 @@ function woocommerce_bitpay_init()
                         if ( in_array($order->status, array('on-hold', 'pending') ) ) {
                             $order->update_status($invalid_status, __('Bitcoin payment is invalid for this order! The payment was not confirmed by the network within 1 hour.', 'bitpay'));
                         } else {
-                            error_log('Paid IPN, but order has status: '.$order-status);
+                            $error_string = 'Paid IPN, but order has status: '.$order->status;
+                            if ('yes' == $this->debug) {
+                                $this->log->add( 'bitpay', "[Warning] $error_string" );
+                            }
                         }
                         break;
                     case 'default':
-                        error_log('Unhandled invoice status: '.$invoice->getStatus());
+                        $error_string = 'Unhandled invoice status: '.$invoice->getStatus();
+                        if ('yes' == $this->debug) {
+                            $this->log->add( 'bitpay', "[Warning] $error_string" );
+                        }
 
                 }
 
