@@ -73,7 +73,7 @@ when using the API.
 You are also able to configure how BitPay's IPN (Instant Payment Notifications)
 changes the order in your WooCommerce store.
 
-![Invoice Settings](https://raw.githubusercontent.com/bitpay/woocommerce-bitpay/master/docs/img/ordersettings.png "Invoice Settings")
+![Invoice Settings](https://raw.githubusercontent.com/sambohler/woocommerce-bitpay/master/docs/img/ordersettings.png "Invoice Settings")
 
 Save your changes and you're good to go!
 
