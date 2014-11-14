@@ -5,7 +5,7 @@ Requires at least: 3.9
 Tested up to: 4.0
 Stable tag: trunk
 License: MIT
-License URI: ttps://github.com/bitpay/woocommerce-bitpay/blob/master/LICENSE
+License URI: ttps://github.com/bitpay/woocommerce-plugin/blob/master/LICENSE
 
 BitPay payment gateway for WooCommerce
 

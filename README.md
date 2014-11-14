@@ -3,7 +3,7 @@ WooCommerce BitPay Payment Gateway
 
 # Build Status
 
-[![Build Status](https://travis-ci.org/bitpay/woocommerce-plugin.svg?branch=master)](https://travis-ci.org/bitpay/woocommerce-bitpay)
+[![Build Status](https://travis-ci.org/bitpay/woocommerce-plugin.svg?branch=master)](https://travis-ci.org/bitpay/woocommerce-plugin)
 
 # Brief Description
 
@@ -53,15 +53,15 @@ Configuration can be done using the Administrator section of Wordpress.
 Once Logged in, you will find the configuration settings under **WooCommerce > Settings > Checkout > BitPay**.
 Alternatively, you can also get to the configuration settings via Plugins and clicking the Settings link for this plugin.
 
-![BitPay Settings](https://raw.githubusercontent.com/sambohler/woocommerce-bitpay/master/docs/img/admin.png "BitPay Settings")
+![BitPay Settings](https://raw.githubusercontent.com/bitpay/woocommerce-plugin/master/docs/img/admin.png "BitPay Settings")
 
 Here your will need to create a [pairing code](https://bitpay.com/api-tokens) using
 your BitPay merchant account. Once you have a Pairing Code, put the code in the
 Pairing Code field:
-![Pairing Code field](https://raw.githubusercontent.com/sambohler/woocommerce-bitpay/master/docs/img/pairingcode.png "Pairing Code field")
+![Pairing Code field](https://raw.githubusercontent.com/bitpay/woocommerce-plugin/master/docs/img/pairingcode.png "Pairing Code field")
 
 On success, you'll receive a token:
-![BitPay Token](https://raw.githubusercontent.com/sambohler/woocommerce-bitpay/master/docs/img/token.png "Bitpay Token")
+![BitPay Token](https://raw.githubusercontent.com/bitpay/woocommerce-plugin/master/docs/img/token.png "Bitpay Token")
 
 ***NOTE*** Pairing Codes are only valid for a short period of time. If it expires
 before you get to use it, you can always create a new one and pair with it.
@@ -73,7 +73,7 @@ when using the API.
 You are also able to configure how BitPay's IPN (Instant Payment Notifications)
 changes the order in your WooCommerce store.
 
-![Invoice Settings](https://raw.githubusercontent.com/sambohler/woocommerce-bitpay/master/docs/img/ordersettings.png "Invoice Settings")
+![Invoice Settings](https://raw.githubusercontent.com/bitpay/woocommerce-plugin/master/docs/img/ordersettings.png "Invoice Settings")
 
 Save your changes and you're good to go!
 
@@ -98,19 +98,20 @@ fulfillment.
 Clone the repo:
 ```bash
 $ git clone https://github.com/bitpay/woocommerce-plugin
-$ cd woocommerce-bitpay
+$ cd woocommerce-plugin
 ```
 Install the dependencies:
 ```bash
-$ sudo npm install
-$ composer install
+$ npm install
+$ curl -sS https://getcomposer.org/installer | php
+$ ./composer.phar install
 ```
 ##Build
 Perform the [setup](#Setup), then:
 ```bash
-$ grunt build
-# Outputs plugin at dist/woocommerce-bitpay
-# Outputs plugin archive at dist/woocommerce-bitpay.zip
+$ ./node_modules/.bin/grunt build
+# Outputs plugin at dist/woocommerce-plugin
+# Outputs plugin archive at dist/woocommerce-plugin.zip
 ```
 
 # Support
