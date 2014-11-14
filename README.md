@@ -91,7 +91,6 @@ fulfillment.
 
 ##Setup
 
-###Requirements
  * NodeJS & NPM
  * Grunt
  * Composer
