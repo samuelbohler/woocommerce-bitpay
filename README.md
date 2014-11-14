@@ -136,16 +136,11 @@ $ grunt build
    SSL verification errors.
 2. Verify that your web server is not blocking POSTs from servers it may not
    recognize. Double check this on your firewall as well, if one is being used.
-3. Check the `payment_bitpay.log` file for any errors during BitPay payment attempts.
-   If you contact BitPay support, they will ask to see the log file to help
-   diagnose the problem.  The log file will be found inside your Magento's
-   `var/log/` directory. ***NOTE*** You will need to enable the debugging
-   setting for the extension to output information into the log file.
-4. Check the version of this plugin against the official plugin repository to
+3. Check the version of this plugin against the official plugin repository to
    ensure you are using the latest version. Your issue might have been
    addressed in a newer version! See the [Releases](https://github.com/bitpay/woocommerce-plugin/releases)
    page for the latest.
-5. If all else fails, send an email describing your issue **in detail** to
+4. If all else fails, send an email describing your issue **in detail** to
    support@bitpay.com
 
 ***TIP***: When contacting support it will help us is you provide:
