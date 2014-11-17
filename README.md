@@ -102,13 +102,14 @@ $ cd woocommerce-bitpay
 ```
 Install the dependencies:
 ```bash
-$ sudo npm install
-$ composer install
+$ npm install
+$ curl -sS https://getcomposer.org/installer | php
+$ ./composer.phar install
 ```
 ##Build
 Perform the [setup](#Setup), then:
 ```bash
-$ grunt build
+$ ./node_modules/.bin/grunt build
 # Outputs plugin at dist/woocommerce-bitpay
 # Outputs plugin archive at dist/woocommerce-bitpay.zip
 ```
